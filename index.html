@@ -894,7 +894,7 @@ function applyTranslations() {
         'sub-name': currentLang==='fr'?'Votre nom complet':'Your full name',
         'sub-id': currentLang==='fr'?'ex. T12345':'e.g. T12345',
         'tech-id-input': currentLang==='fr'?'ex. T98765':'e.g. T98765',
-        'wo-number': currentLang==='fr'?'ex. WO-2026-88421':'e.g. WO-2026-88421',
+        'wo-number': currentLang==='fr'?'ex. 10004782391':'e.g. 10004782391',
         'sub-desc': currentLang==='fr'?'Fournissez une description détaillée de la situation...':'Provide a detailed description of the situation...',
         'login-email': currentLang==='fr'?'votrenom@telus.com':'yourname@telus.com',
         'm-search': currentLang==='fr'?'Rechercher réf #, tech, BT...':'Search ref #, tech, WO, manager...'
@@ -1121,7 +1121,7 @@ function generateSampleData() {
         var managerEmail=manager.toLowerCase().replace(/\s+/g,'.').replace(/'/g,'')+'@telus.com';
         var ccts=priority===1?rng()<0.22:rng()<0.07;
         var damage=rng()<0.05;
-        subs.push({refNumber:refNumber,priority:priority,techName:techName,techId:techId,partner:partner,region:region,manager:manager,managerEmail:managerEmail,managerLevel2:MANAGER_L2[partner],managerLevel2Email:MANAGER_L2_EMAIL[partner],submitterName:SN[Math.floor(rng()*SN.length)],submitterId:'T2'+String(Math.floor(rng()*9000)+1000),submitterRole:['FSM Agent','Dispatcher','Customer Care','QA'][Math.floor(rng()*4)],submitterEmail:'',woNumber:'WO-2026-'+String(Math.floor(rng()*90000)+10000),interactionDate:submittedAt.toISOString().split('T')[0],categories:cats,description:'Feedback regarding '+cats.join(', ')+' observed during work order.',ccts:ccts,cctsCaseNumber:'',damage:damage,techcentralLink:'',photoAttachment:'',scheduledDate:scheduledDate,scheduledTime:scheduledTime,status:status,submittedAt:submittedAt.toISOString(),escalationLevel:escalationLevel,responseHours:responseHours,coachingNotes:coachingNotes,coachingDate:coachingDate,coachingFollowup:coachingFollowup,statusHistory:statusHistory,_userSubmitted:false,_emailSent:false});
+        subs.push({refNumber:refNumber,priority:priority,techName:techName,techId:techId,partner:partner,region:region,manager:manager,managerEmail:managerEmail,managerLevel2:MANAGER_L2[partner],managerLevel2Email:MANAGER_L2_EMAIL[partner],submitterName:SN[Math.floor(rng()*SN.length)],submitterId:'T2'+String(Math.floor(rng()*9000)+1000),submitterRole:['FSM Agent','Dispatcher','Customer Care','QA'][Math.floor(rng()*4)],submitterEmail:'',woNumber:'1000'+String(Math.floor(rng()*9000000)+1000000),interactionDate:submittedAt.toISOString().split('T')[0],categories:cats,description:'Feedback regarding '+cats.join(', ')+' observed during work order.',ccts:ccts,cctsCaseNumber:'',damage:damage,techcentralLink:'',photoAttachment:'',scheduledDate:scheduledDate,scheduledTime:scheduledTime,status:status,submittedAt:submittedAt.toISOString(),escalationLevel:escalationLevel,responseHours:responseHours,coachingNotes:coachingNotes,coachingDate:coachingDate,coachingFollowup:coachingFollowup,statusHistory:statusHistory,_userSubmitted:false,_emailSent:false});
     }
     subs.sort(function(a,b){return new Date(b.submittedAt)-new Date(a.submittedAt);});
     submissions=subs;
