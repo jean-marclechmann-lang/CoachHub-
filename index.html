@@ -2362,20 +2362,94 @@ function getTrendBadge(techId) {
     return '';
 }
 // ============================================================
-// P1 COUNTDOWN
+// P1 ESCALATION COUNTDOWN & AUTO-ESCALATION
 // ============================================================
+var P1_WARNING_HOURS = 6;
+var P1_WINDOW_HOURS = 8;
+var _escalationChecked = false;
+
 function getCountdownBadge(sub) {
     if (sub.priority !== 1) return '';
+    if (sub.status === 'Coaching Completed' || sub.status === 'Closed') return '';
     var hoursOpen = (Date.now() - new Date(sub.submittedAt)) / 3600000;
-    var hoursLeft = 8 - hoursOpen;
-    if (hoursLeft <= 0) {
-        return '<span class="countdown-badge countdown-urgent">🚨 OVERDUE ' + Math.abs(Math.round(hoursLeft)) + 'h</span>';
-    } else if (hoursLeft <= 2) {
-        return '<span class="countdown-badge countdown-urgent">⏱ ' + Math.round(hoursLeft * 60) + 'm left</span>';
-    } else if (hoursLeft <= 4) {
-        return '<span class="countdown-badge countdown-warning">⏱ ' + hoursLeft.toFixed(1) + 'h left</span>';
+    var hoursToWarning = P1_WARNING_HOURS - hoursOpen;
+    var hoursToExpiry = P1_WINDOW_HOURS - hoursOpen;
+    if (hoursOpen >= P1_WINDOW_HOURS) {
+        var overdueHrs = Math.round(hoursOpen - P1_WINDOW_HOURS);
+        return '<span class="countdown-badge countdown-urgent">🚨 OVERDUE +' + overdueHrs + 'h</span>';
+    } else if (hoursOpen >= P1_WARNING_HOURS) {
+        var minsLeft = Math.round(hoursToExpiry * 60);
+        return '<span class="countdown-badge countdown-urgent">⚠️ ' + minsLeft + 'm to deadline</span>';
+    } else if (hoursToWarning <= 2) {
+        return '<span class="countdown-badge countdown-warning">⏱ ' + hoursToWarning.toFixed(1) + 'h to escalation</span>';
     } else {
-        return '<span class="countdown-badge countdown-ok">⏱ ' + hoursLeft.toFixed(1) + 'h left</span>';
+        return '<span class="countdown-badge countdown-ok">⏱ ' + hoursToWarning.toFixed(1) + 'h remaining</span>';
+    }
+}
+
+function checkAutoEscalations() {
+    var now = Date.now();
+    var escalated = [];
+    submissions.forEach(function(sub) {
+        if (sub.priority !== 1) return;
+        if (sub.status !== 'Submitted') return;
+        if (sub.escalationLevel >= 1) return;
+        var hoursOpen = (now - new Date(sub.submittedAt)) / 3600000;
+        if (hoursOpen >= P1_WARNING_HOURS) {
+            // Auto-escalate
+            sub.escalationLevel = 1;
+            sub.status = 'Submitted';
+            sub.statusHistory = sub.statusHistory || [];
+            sub.statusHistory.push({
+                status: 'Submitted',
+                time: new Date().toISOString(),
+                note: '🚨 AUTO-ESCALATED after ' + Math.round(hoursOpen) + ' hours with no manager action. L2 manager notified.'
+            });
+            escalated.push(sub);
+            // Attempt L2 email via backend
+            if (backendConnected) {
+                fetch(BACKEND_URL, {
+                    method: 'POST', redirect: 'follow',
+                    headers: {'Content-Type': 'text/plain'},
+                    body: JSON.stringify({
+                        action: 'escalateSubmission',
+                        refNumber: sub.refNumber,
+                        escalationLevel: 1,
+                        hoursOpen: Math.round(hoursOpen),
+                        managerLevel2: sub.managerLevel2,
+                        managerLevel2Email: sub.managerLevel2Email
+                    })
+                }).catch(function(){});
+            }
+        }
+    });
+    if (escalated.length > 0) {
+        showEscalationAlert(escalated);
+        renderManage();
+        updateDashboard();
+        renderAdmin();
+    }
+    return escalated.length;
+}
+
+function showEscalationAlert(escalatedSubs) {
+    escalatedSubs.forEach(function(sub) {
+        showToast('🚨 ' + sub.refNumber + ' auto-escalated to L2 — ' + sub.managerLevel2, 'warning');
+    });
+    // Show prominent dashboard banner
+    var riskEl = document.getElementById('risk-list');
+    if (riskEl) {
+        var banner = document.createElement('div');
+        banner.style.cssText = 'background:linear-gradient(135deg,#FFE8EC,#FFD0D8);border:2px solid #D0021B;border-left:6px solid #D0021B;border-radius:8px;padding:12px 16px;margin-bottom:10px;animation:pulse 2s infinite;';
+        banner.innerHTML = '<div style="font-size:15px;font-weight:800;color:#9B0000;margin-bottom:4px;">🚨 Auto-Escalation Triggered</div>' +
+            '<div style="font-size:13px;color:#7A0000;">' + escalatedSubs.length + ' P1 submission' + (escalatedSubs.length > 1 ? 's have' : ' has') + ' exceeded the 6-hour response window and been escalated to L2 management.</div>' +
+            '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">' +
+            escalatedSubs.map(function(s) {
+                return '<button onclick="viewDetail(\'' + s.refNumber + '\')" style="background:#D0021B;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">' + s.refNumber + '</button>';
+            }).join('') + '</div>';
+        riskEl.insertBefore(banner, riskEl.firstChild);
+        // Auto-remove banner after 30 seconds
+        setTimeout(function(){ if(banner.parentNode) banner.parentNode.removeChild(banner); }, 30000);
     }
 }
 // ============================================================
@@ -2524,8 +2598,8 @@ function showView(name){
     var map={submit:0,track:1,manage:2,dashboard:3,admin:4};
     var btns=document.querySelectorAll('.nbtn');
     if(btns[map[name]])btns[map[name]].classList.add('active');
-    if(name==='dashboard')updateDashboard();
-    if(name==='manage')renderManage();
+    if(name==='dashboard'){checkAutoEscalations();updateDashboard();}
+    if(name==='manage'){checkAutoEscalations();renderManage();}
     if(name==='admin')renderAdmin();
     if(name==='recognition')renderRecognition();
 }
@@ -2581,6 +2655,7 @@ window.addEventListener('load', function() {
     }
     initLang();
     generateSampleData();
+    checkAutoEscalations();
     var note = document.getElementById('submit-mode-note');
     if (note) {
         note.className = 'alert info';
