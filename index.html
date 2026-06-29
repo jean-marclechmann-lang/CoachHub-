@@ -1633,7 +1633,7 @@ function openReturn(ref) {
     if (sel) sel.value = '';
     if (cmt) cmt.value = '';
     var modal = document.getElementById('modal-return');
-    if (modal) { modal.style.display = 'flex'; }
+    if (modal) { modal.classList.add('show'); }
 }
 function confirmReturn() {
     var ref = currentReturnRef; if (!ref) return;
@@ -1656,10 +1656,12 @@ function confirmReturn() {
     });
     currentReturnRef = null;
     closeModal('modal-return');
-    renderManage();
-    updateDashboard();
-    renderAdmin();
     showToast('↩ Submission ' + ref + ' returned to submitter.', 'warning');
+    setTimeout(function() {
+        renderManage();
+        updateDashboard();
+        renderAdmin();
+    }, 200);
     // Backend email call (fires when CORS resolved)
     if (backendConnected) {
         fetch(BACKEND_URL, {method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
@@ -1912,7 +1914,7 @@ window.addEventListener('load', function() {
     if (dashDate) dashDate.textContent = new Date().toLocaleDateString(currentLang==='fr'?'fr-CA':'en-CA', {month:'long',day:'numeric',year:'numeric'});
 });
 </script>
-<div class="modal-overlay" id="modal-return" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+<div class="modal-overlay" id="modal-return">
     <div class="modal" style="max-width:500px;">
         <div class="modal-header">
             <div class="modal-title">↩ Return Submission to Submitter</div>
